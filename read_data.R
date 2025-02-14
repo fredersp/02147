@@ -1,7 +1,7 @@
 ### Read training data
 #! Perhaps you need to set the working directory!?
 #setwd("/home/pbac/g/course02417/2025/assignment1")
-D <- read.csv("02147/DST_BIL54.csv")
+D <- read.csv("DST_BIL54.csv")
 str(D)
 
 # See the help
