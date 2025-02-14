@@ -21,7 +21,13 @@ teststart <- as.POSIXct("2024-01-01", tz="UTC")
 Dtrain <- D[D$time < teststart, ]
 Dtest <- D[D$time >= teststart, ]
 
-# Make an array with train set with the year + month/12
+
+################################################
+# 1 Plot data
+################################################
+
+
+# 1.1 Make an array with train set with the year + month/12
 x <- 1900 + as.POSIXlt(Dtrain$time)$year + as.POSIXlt(Dtrain$time)$mon / 12
 
 # plot dtotal with x
@@ -29,5 +35,8 @@ plot(x, Dtrain$total, xlab="Year", ylab="Total (millions)", main="Total number o
 grid() # Add grid lines
 points(x, Dtrain$total, pch=16, col="red") # Add points to the plot
 
-# plot dtotal with x
-plot(x, Dtrain$total, xlab="Year", ylab="Total (millions)", main="Total number of vehicles in Denmark", type="l") 
+
+################################################
+# 2 Linear Trend model
+################################################
+
