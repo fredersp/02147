@@ -40,3 +40,9 @@ points(x, Dtrain$total, pch=16, col="red") # Add points to the plot
 # 2 Linear Trend model
 ################################################
 
+# Fit a linear model
+fit <- lm(Dtrain$total ~ x)
+summary(fit)
+plot(x, Dtrain$total, xlab="Year", ylab="Total (millions)", main="Total number of vehicles in Denmark", type="l", col="blue", lwd=2)
+abline(fit, col="red", lwd=2)
+
