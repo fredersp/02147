@@ -25,4 +25,9 @@ Dtest <- D[D$time >= teststart, ]
 x <- 1900 + as.POSIXlt(Dtrain$time)$year + as.POSIXlt(Dtrain$time)$mon / 12
 
 # plot dtotal with x
-plot(x, Dtrain$total, xlab="Year", ylab="Total (millions)", main="Total number of vehicles in Denmark", type="l")
+plot(x, Dtrain$total, xlab="Year", ylab="Total (millions)", main="Total number of vehicles in Denmark", type="l", col="blue", lwd=2)
+grid() # Add grid lines
+points(x, Dtrain$total, pch=16, col="red") # Add points to the plot
+
+# plot dtotal with x
+plot(x, Dtrain$total, xlab="Year", ylab="Total (millions)", main="Total number of vehicles in Denmark", type="l") 
