@@ -46,7 +46,9 @@ points(x, Dtrain$total, pch=16, col="red") # Add points to the plot
 fit <- lm(Dtrain$total ~ x)
 summary(fit)
 # Plot the estimated mean as a line with the observations as points
-
+plot(x, Dtrain$total, xlab="Year", ylab="Total (millions)", main="Total number of vehicles in Denmark", type="p", col="blue", lwd=2)
+grid() # Add grid lines
+abline(fit, col="red", lwd=2) # Add the fitted line to the plot
 
 
 # 2.3 Forecast for next 12 months
@@ -110,50 +112,17 @@ acf(e)
 
 # 3.1. Describe the variance-covariance matrix  for the local model and compare it to the variance-covariance matrix of the corresponding global model
 
-# Variance-covariance matrix of global model
+# Variance - covariance for global model, all weights are 1 as we value all observations equally
+SIGMA <- diag(n)
 
-# X is the "design matrix"
-X <- cbind(1, x)
-print(X)
-
-n <- length(e) # number of samples
-p <- 2 # Number of parameters
-
-
-# calculate sum of squared residuals:
-RSS <- sum(e^2)
-
-# calculate sigma^2:
-sigma2 <- as.numeric(RSS/(n - p))
-
-diag(sigma2, n, n)
-
-# calculate variance-covariance matrix of _parameters_:
-V <- sigma2 * solve(t(X) %*% X)
-print(V)
-
-# the variances of the parameters are the values in the diagonal:
-diag(V)
-
-# and the standard errors are given by:
-sqrt(diag(V))
-
-# Variance-covariance matrix of local model
+# Variance-covariance for local model
+# Weights are increasing with time as we value recent observations more
 lambda = 0.9
 weights <- lambda^((n-1):0)
 
-SIGMA <- diag(n)
-diag(SIGMA) <- 1/weights
-W <- diag(weights)
-
-V_local <- sigma2 * solve(t(X) %*% W %*% X)
-
-
-# Conclusion
-# Global variance-covariance matrix: 
-V
-# Local variance-covariance matrix:
-V_local
+# Create a diagonal matrix with the weights
+SIGMA <- diag(n)*1/weights
+W = diag(n)*weights
 
 
 # 3.2 plot the weights vs. time
@@ -173,15 +142,26 @@ theta_hat
 
 # 3.5. Make a forecast for the next 12 months - i.e., compute predicted values corresponding to the WLS model with λ = 0.9
 
+
+
+
 Xnew <- cbind(1, xnew)
 print(Xnew)
 pred_local <- Xnew %*% theta_hat
 
+
+n <- length(e) # number of samples
+p <- 2 # Number of parameters
+
+e_wls <- y - yhat_wls
+RSS_wls <- t(e_wls)%*%solve(SIGMA)%*%e_wls
+sigma2_wls <- as.numeric(RSS_wls/(n - p))
 Vmatrix_pred_local <- sigma2 * (1 + (Xnew %*% solve(t(X)%*%solve(SIGMA)%*%X)) %*% t(Xnew) )
 
 # prediction interval
-y_pred_lwr_wls <- pred_local - qt(0.975, df=n-1)*sqrt(diag(Vmatrix_pred_local))
-y_pred_upr_wls <- pred_local + qt(0.975, df=n-1)*sqrt(diag(Vmatrix_pred_local))
+y_pred_lwr_wls <- y_pred_wls - qt(0.975, df=n-1)*sqrt(diag(Vmatrix_pred_local))
+y_pred_upr_wls <- y_pred_wls + qt(0.975, df=n-1)*sqrt(diag(Vmatrix_pred_local))
+
 
 # Create a dataframe for the predictions
 df_pred_local <- data.frame(Year = xnew, Total = pred_local, Type = "Predicted")
@@ -230,7 +210,7 @@ theta_hat
 # Calculate the estimates of ˆθ_N and compare them to the OLS estimates of θ, are they close? 
 theta_hat <- matrix(0, nrow = 2, ncol = n)
 P <- diag(2)
-theta_hat[,1] <- c(-110, 0.056)  # Initialize the first value
+theta_hat[,1] <- c(0, 0)  # Initialize the first value
 for (t in 2:n) {
   x_t <- matrix(X[t,], ncol = 1)  # Ensure x_t is a column vector
   y_t <- Dtrain$total[t]
@@ -352,6 +332,23 @@ grid() # Add grid lines
 
 
 
+
+# plot predictions with original data
+# Create a dataframe for the predictions
+df_pred_rls1 <- data.frame(Year = x, Total = one_step_ahead_pred, Type = "Predicted")
+df_pred_rls2 <- data.frame(Year = x, Total = one_step_ahead_pred2, Type = "Predicted")
+
+# Plot
+ggplot(data = df_train, aes(x=Year, y = Total)) +
+  geom_point(size = 3) + geom_point(data = df_pred_rls1, aes(x=Year, y =Total), color = "blue") +  # Points for predicted values
+  geom_point(data = df_pred_rls2, aes(x=Year, y =Total), color = "red") +  # Points for predicted values
+  geom_line(data = df_train, aes(x = Year, y = Total), color = "blue", linetype = "dashed") +  # Line for observed data
+  geom_line(data = df_pred_rls1, aes(x = Year, y = Total), color = "blue") +  # Line for predicted data
+  geom_line(data = df_pred_rls2, aes(x = Year, y = Total), color = "red") +  # Line for predicted data
+  labs(title = "Total Number of Vehicles in Denmark",
+       x = "Year", y = "Total (millions)") +
+  #scale_color_manual(values = c("Observed" = "blue", "Predicted" = "green")) +
+  theme_minimal()
 
 
 
