@@ -45,6 +45,7 @@ points(x, Dtrain$total, pch=16, col="red") # Add points to the plot
 # 2.2 Fit a linear model
 fit <- lm(Dtrain$total ~ x)
 summary(fit)
+# intercept and slope
 # Plot the estimated mean as a line with the observations as points
 plot(x, Dtrain$total, xlab="Year", ylab="Total (millions)", main="Total number of vehicles in Denmark", type="p", col="blue", lwd=2)
 grid() # Add grid lines
@@ -67,21 +68,43 @@ library(ggplot2)
 
 # Create a dataframe for the observations (training data)
 df_train <- data.frame(Year = x, Total = Dtrain$total, Type = "Observed")
+df_test <- data.frame(Year = xnew, Total = Dtest$total, Type = "Test")
 
 # Create a dataframe for the predictions
 df_pred <- data.frame(Year = xnew, Total = pred, Type = "Predicted")
 
-# Plot
-ggplot(data = df_train, aes(x=Year, y = Total)) +
-  geom_point(size = 3) + geom_point(data = df_pred, aes(x=Year, y =Total), color = "green") +  # Points for both observed and predicted values
-  geom_line(data = df_train, aes(x = Year, y = Total), color = "blue", linetype = "dashed") +  # Line for observed data
-  geom_line(data = df_pred, aes(x = Year, y = Total), color = "green") +  # Line for predicted data
-  geom_abline(intercept = coef(fit)[1], slope = coef(fit)[2], color = "red") + # line for fit
-  geom_ribbon(data = df_pred, aes(x = Year, ymin = lwr, ymax = upr), fill = "red", alpha = 0.2) +
+
+# Create the plot
+library(ggplot2)
+
+ggplot() +
+  # Observed data (training set)
+  geom_point(data = df_train, aes(x = Year, y = Total, color = "Observed"), size = 3) +  
+  geom_line(data = df_train, aes(x = Year, y = Total, color = "Observed"), linetype = "dashed") +  
+  
+  # Predicted data
+  geom_point(data = df_pred, aes(x = Year, y = Total, color = "Predicted"), size = 3) +  
+  geom_line(data = df_pred, aes(x = Year, y = Total, color = "Predicted")) +  
+  
+  # test data
+  geom_point(data = df_test, aes(x = Year, y = Total, color = "Test"), size = 3) +
+  # Fitted regression line (now correctly red)
+  geom_abline(aes(intercept = coef(fit)[1], slope = coef(fit)[2], color = "Fitted Model"), linewidth = 1) +  
+
+  # Confidence interval for predictions
+  geom_ribbon(data = df_pred, aes(x = Year, ymin = lwr, ymax = upr, fill = "Prediction Interval"), alpha = 0.2) +
+  
+  # Labels
   labs(title = "Total Number of Vehicles in Denmark",
-       x = "Year", y = "Total (millions)") +
-  #scale_color_manual(values = c("Observed" = "blue", "Predicted" = "green")) +
+       x = "Year", y = "Total (millions)", color = "Legend", fill = "Legend") +
+  
+  # Define colors for legend
+  scale_color_manual(values = c("Observed" = "blue", "Predicted" = "green", "Fitted Model" = "red")) +
+  scale_fill_manual(values = c("Prediction Interval" = "red")) +
+  
+  # Minimal theme
   theme_minimal()
+
 
 # 2.5 Investigate the residuals of the model. Are the model assumptions fulfilled?
 
