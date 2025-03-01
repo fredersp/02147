@@ -45,8 +45,11 @@ points(x, Dtrain$total, pch = 16, col = "red") # Add points to the plot
 # 2.2 Fit a linear model
 fit <- lm(Dtrain$total ~ x)
 summary(fit)
+# intercept and slope
 # Plot the estimated mean as a line with the observations as points
-
+plot(x, Dtrain$total, xlab="Year", ylab="Total (millions)", main="Total number of vehicles in Denmark", type="p", col="blue", lwd=2)
+grid() # Add grid lines
+abline(fit, col="red", lwd=2) # Add the fitted line to the plot
 
 
 # 2.3 Forecast for next 12 months
@@ -65,24 +68,43 @@ library(ggplot2)
 
 # Create a dataframe for the observations (training data)
 df_train <- data.frame(Year = x, Total = Dtrain$total, Type = "Observed")
+df_test <- data.frame(Year = xnew, Total = Dtest$total, Type = "Test")
 
 # Create a dataframe for the predictions
 df_pred <- data.frame(Year = xnew, Total = pred, Type = "Predicted")
 
-# Plot
-ggplot(data = df_train, aes(x = Year, y = Total)) +
-  geom_point(size = 3) +
-  geom_point(data = df_pred, aes(x = Year, y = Total), color = "green") + # Points for both observed and predicted values
-  geom_line(data = df_train, aes(x = Year, y = Total), color = "blue", linetype = "dashed") + # Line for observed data
-  geom_line(data = df_pred, aes(x = Year, y = Total), color = "green") + # Line for predicted data
-  geom_abline(intercept = coef(fit)[1], slope = coef(fit)[2], color = "red") + # line for fit
-  geom_ribbon(data = df_pred, aes(x = Year, ymin = lwr, ymax = upr), fill = "red", alpha = 0.2) +
-  labs(
-    title = "Total Number of Vehicles in Denmark",
-    x = "Year", y = "Total (millions)"
-  ) +
-  # scale_color_manual(values = c("Observed" = "blue", "Predicted" = "green")) +
+
+# Create the plot
+library(ggplot2)
+
+ggplot() +
+  # Observed data (training set)
+  geom_point(data = df_train, aes(x = Year, y = Total, color = "Observed"), size = 3) +  
+  geom_line(data = df_train, aes(x = Year, y = Total, color = "Observed"), linetype = "dashed") +  
+  
+  # Predicted data
+  geom_point(data = df_pred, aes(x = Year, y = Total, color = "Predicted"), size = 3) +  
+  geom_line(data = df_pred, aes(x = Year, y = Total, color = "Predicted")) +  
+  
+  # test data
+  geom_point(data = df_test, aes(x = Year, y = Total, color = "Test"), size = 3) +
+  # Fitted regression line (now correctly red)
+  geom_abline(aes(intercept = coef(fit)[1], slope = coef(fit)[2], color = "Fitted Model"), linewidth = 1) +  
+
+  # Confidence interval for predictions
+  geom_ribbon(data = df_pred, aes(x = Year, ymin = lwr, ymax = upr, fill = "Prediction Interval"), alpha = 0.2) +
+  
+  # Labels
+  labs(title = "Total Number of Vehicles in Denmark",
+       x = "Year", y = "Total (millions)", color = "Legend", fill = "Legend") +
+  
+  # Define colors for legend
+  scale_color_manual(values = c("Observed" = "blue", "Predicted" = "green", "Fitted Model" = "red")) +
+  scale_fill_manual(values = c("Prediction Interval" = "red")) +
+  
+  # Minimal theme
   theme_minimal()
+
 
 # 2.5 Investigate the residuals of the model. Are the model assumptions fulfilled?
 
@@ -113,50 +135,17 @@ acf(e)
 
 # 3.1. Describe the variance-covariance matrix  for the local model and compare it to the variance-covariance matrix of the corresponding global model
 
-# Variance-covariance matrix of global model
-
-# X is the "design matrix"
-X <- cbind(1, x)
-print(X)
-
-n <- length(e) # number of samples
-p <- 2 # Number of parameters
-
-
-# calculate sum of squared residuals:
-RSS <- sum(e^2)
-
-# calculate sigma^2:
-sigma2 <- as.numeric(RSS / (n - p))
-
-diag(sigma2, n, n)
-
-# calculate variance-covariance matrix of _parameters_:
-V <- sigma2 * solve(t(X) %*% X)
-print(V)
-
-# the variances of the parameters are the values in the diagonal:
-diag(V)
-
-# and the standard errors are given by:
-sqrt(diag(V))
-
-# Variance-covariance matrix of local model
-lambda <- 0.9
-weights <- lambda^((n - 1):0)
-
+# Variance - covariance for global model, all weights are 1 as we value all observations equally
 SIGMA <- diag(n)
-diag(SIGMA) <- 1 / weights
-W <- diag(weights)
 
-V_local <- sigma2 * solve(t(X) %*% W %*% X)
+# Variance-covariance for local model
+# Weights are increasing with time as we value recent observations more
+lambda = 0.9
+weights <- lambda^((n-1):0)
 
-
-# Conclusion
-# Global variance-covariance matrix:
-V
-# Local variance-covariance matrix:
-V_local
+# Create a diagonal matrix with the weights
+SIGMA <- diag(n)*1/weights
+W = diag(n)*weights
 
 
 # 3.2 plot the weights vs. time
@@ -176,15 +165,26 @@ theta_hat
 
 # 3.5. Make a forecast for the next 12 months - i.e., compute predicted values corresponding to the WLS model with λ = 0.9
 
+
+
+
 Xnew <- cbind(1, xnew)
 print(Xnew)
 pred_local <- Xnew %*% theta_hat
 
-Vmatrix_pred_local <- sigma2 * (1 + (Xnew %*% solve(t(X) %*% solve(SIGMA) %*% X)) %*% t(Xnew))
+
+n <- length(e) # number of samples
+p <- 2 # Number of parameters
+
+e_wls <- y - yhat_wls
+RSS_wls <- t(e_wls)%*%solve(SIGMA)%*%e_wls
+sigma2_wls <- as.numeric(RSS_wls/(n - p))
+Vmatrix_pred_local <- sigma2 * (1 + (Xnew %*% solve(t(X)%*%solve(SIGMA)%*%X)) %*% t(Xnew) )
 
 # prediction interval
-y_pred_lwr_wls <- pred_local - qt(0.975, df = n - 1) * sqrt(diag(Vmatrix_pred_local))
-y_pred_upr_wls <- pred_local + qt(0.975, df = n - 1) * sqrt(diag(Vmatrix_pred_local))
+y_pred_lwr_wls <- y_pred_wls - qt(0.975, df=n-1)*sqrt(diag(Vmatrix_pred_local))
+y_pred_upr_wls <- y_pred_wls + qt(0.975, df=n-1)*sqrt(diag(Vmatrix_pred_local))
+
 
 # Create a dataframe for the predictions
 df_pred_local <- data.frame(Year = xnew, Total = pred_local, Type = "Predicted")
@@ -475,5 +475,22 @@ for (i in seq_along(k_values)) {
 }
 
 # Display the stored predictions
-head(PredictionMatrix)
+PredictionMatrix
+
+# Make one plot for each k-step-ahead prediction with legends and the actual data
+library(tidyr)
+library(ggplot2)
+
+# Reshape the dataframe for plotting
+PredictionMatrix_long <- gather(PredictionMatrix, key = "Horizon", value = "Prediction", -Year, -Actual)
+
+# Plot
+ggplot(data = PredictionMatrix_long, aes(x = Year, y = Prediction, color = Horizon)) +
+  geom_line(size = 1) +
+  geom_line(data = PredictionMatrix_long, aes(x = Year, y = Actual), color = "black", size = 1, linetype = "dashed") +
+  labs(title = "k-step-ahead Predictions with Optimal λ for Different Horizons",
+       x = "Year", y = "Total (millions)", color = "Forecast Horizon (k)") +
+  theme_minimal()
+
+  
 
