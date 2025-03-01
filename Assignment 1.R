@@ -487,10 +487,41 @@ PredictionMatrix_long <- gather(PredictionMatrix, key = "Horizon", value = "Pred
 # Plot
 ggplot(data = PredictionMatrix_long, aes(x = Year, y = Prediction, color = Horizon)) +
   geom_line(size = 1) +
-  geom_line(data = PredictionMatrix_long, aes(x = Year, y = Actual), color = "black", size = 1, linetype = "dashed") +
+  geom_line(data = PredictionMatrix_long, aes(x = Year, y = Actual, linetype = "Actual"), color = "black", size = 1) +
+  scale_linetype_manual(name = "Legend", values = c("Actual" = "dashed")) +
   labs(title = "k-step-ahead Predictions with Optimal λ for Different Horizons",
        x = "Year", y = "Total (millions)", color = "Forecast Horizon (k)") +
   theme_minimal()
 
+# Plot OLS and WLS
+ggplot() +
+  # Observed data (training set)
+  geom_point(data = df_train, aes(x = Year, y = Total, color = "Observed"), size = 3) +  
+  geom_line(data = df_train, aes(x = Year, y = Total, color = "Observed"), linetype = "dashed") +  
   
+  # Predicted data
+  geom_point(data = df_pred, aes(x = Year, y = Total, color = "Predicted"), size = 3) +  
+  geom_line(data = df_pred, aes(x = Year, y = Total, color = "Predicted")) +  
+  
+  # test data
+  geom_point(data = df_test, aes(x = Year, y = Total, color = "Test"), size = 3) +
+  # Fitted regression line (now correctly red)
+  geom_abline(aes(intercept = coef(fit)[1], slope = coef(fit)[2], color = "Fitted Model"), linewidth = 1) +  
+
+  # Confidence interval for predictions
+  geom_ribbon(data = df_pred, aes(x = Year, ymin = lwr, ymax = upr, fill = "Prediction Interval"), alpha = 0.2) +
+  
+  # Labels
+  labs(title = "Total Number of Vehicles in Denmark",
+       x = "Year", y = "Total (millions)", color = "Legend", fill = "Legend") +
+  
+  # Define colors for legend
+  scale_color_manual(values = c("Observed" = "blue", "Predicted" = "green", "Fitted Model" = "red")) +
+  scale_fill_manual(values = c("Prediction Interval" = "red")) +
+  
+  # Minimal theme
+  theme_minimal()
+
+
+
 
