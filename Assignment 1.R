@@ -132,10 +132,14 @@ acf(e)
 ################################################
 # WLS - Local Linear trend model
 ################################################
+################################################
+# WLS - Local Linear trend model
+################################################
 
 # 3.1. Describe the variance-covariance matrix  for the local model and compare it to the variance-covariance matrix of the corresponding global model
 
 # Variance - covariance for global model, all weights are 1 as we value all observations equally
+n <- 72
 SIGMA <- diag(n)
 
 # Variance-covariance for local model
@@ -149,7 +153,7 @@ W = diag(n)*weights
 
 
 # 3.2 plot the weights vs. time
-plot(x, weights, type = "l", xlab = "Time", ylab = "Weights", main = "Weights for local model", col = "blue", lwd = 2)
+plot(x,weights, type="l", xlab="Time", ylab="Weights", main="Weights for local model", col="blue", lwd=2)
 grid() # Add grid lines
 
 # 3.3 Sum of all lambda weights
@@ -160,52 +164,46 @@ sum(weights)
 
 # 3.4 Estimate and present theta_hat1 and theta_hat2 for the local model with lambda = 0.9
 
+X <- cbind(1, x)
+
 theta_hat <- solve(t(X) %*% W %*% X) %*% t(X) %*% W %*% Dtrain$total
 theta_hat
 
 # 3.5. Make a forecast for the next 12 months - i.e., compute predicted values corresponding to the WLS model with λ = 0.9
 
-
-
-
 Xnew <- cbind(1, xnew)
 print(Xnew)
 pred_local <- Xnew %*% theta_hat
-
-
-n <- length(e) # number of samples
 p <- 2 # Number of parameters
 
-e_wls <- y - yhat_wls
+e_wls <- y - pred_local
 RSS_wls <- t(e_wls)%*%solve(SIGMA)%*%e_wls
 sigma2_wls <- as.numeric(RSS_wls/(n - p))
 Vmatrix_pred_local <- sigma2 * (1 + (Xnew %*% solve(t(X)%*%solve(SIGMA)%*%X)) %*% t(Xnew) )
 
 # prediction interval
-y_pred_lwr_wls <- y_pred_wls - qt(0.975, df=n-1)*sqrt(diag(Vmatrix_pred_local))
-y_pred_upr_wls <- y_pred_wls + qt(0.975, df=n-1)*sqrt(diag(Vmatrix_pred_local))
+y_pred_lwr_wls <- pred_local - qt(0.975, df=n-1)*sqrt(diag(Vmatrix_pred_local))
+y_pred_upr_wls <- pred_local + qt(0.975, df=n-1)*sqrt(diag(Vmatrix_pred_local))
 
 
 # Create a dataframe for the predictions
 df_pred_local <- data.frame(Year = xnew, Total = pred_local, Type = "Predicted")
 
 # Plot
-ggplot(data = df_train, aes(x = Year, y = Total)) +
-  geom_point(size = 3) +
-  geom_point(data = df_pred, aes(x = Year, y = Total), color = "green") + # Points for predicted values
-  geom_point(data = df_pred_local, aes(x = Year, y = Total), color = "purple") + # Points predicted values
-  geom_line(data = df_train, aes(x = Year, y = Total), color = "blue", linetype = "dashed") + # Line for observed data
-  geom_line(data = df_pred, aes(x = Year, y = Total), color = "green") + # Line for predicted data
+ggplot(data = df_train, aes(x=Year, y = Total)) +
+  geom_point(size = 3) + geom_point(data = df_pred, aes(x=Year, y =Total), color = "green") +  # Points for predicted values
+  geom_point(data = df_pred_local, aes(x=Year, y =Total), color = "purple") +  # Points predicted values
+  geom_line(data = df_train, aes(x = Year, y = Total), color = "blue", linetype = "dashed") +  # Line for observed data
+  geom_line(data = df_pred, aes(x = Year, y = Total), color = "green") +  # Line for predicted data
   geom_abline(intercept = coef(fit)[1], slope = coef(fit)[2], color = "red") + # line for fit
   geom_abline(intercept = theta_hat[1], slope = theta_hat[2], color = "purple") + # line for local fit
   geom_ribbon(data = df_pred, aes(x = Year, ymin = lwr, ymax = upr), fill = "red", alpha = 0.2) +
   geom_ribbon(data = df_pred_local, aes(x = Year, ymin = y_pred_lwr_wls, ymax = y_pred_upr_wls), fill = "purple", alpha = 0.2) +
-  labs(
-    title = "Total Number of Vehicles in Denmark",
-    x = "Year", y = "Total (millions)"
-  ) +
-  # scale_color_manual(values = c("Observed" = "blue", "Predicted" = "green")) +
+  labs(title = "Total Number of Vehicles in Denmark",
+       x = "Year", y = "Total (millions)") +
+  #scale_color_manual(values = c("Observed" = "blue", "Predicted" = "green")) +
   theme_minimal()
+
 
 ################################################
 # RLS - Recursive least squares
