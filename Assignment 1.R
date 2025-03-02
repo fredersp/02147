@@ -322,10 +322,44 @@ return(Theta)
 
 }
 
-RLS_lambda(X, Dtrain$total, p = 2, Theta_0 = c(-110, 0), lambda = 0.99)
-RLS_lambda(X, Dtrain$total, p = 2, Theta_0 = c(-110, 0), lambda = 0.7)
+RLS_lambda(X, Dtrain$total, p = 2, Theta_0 = c(0, 0), lambda = 0.99)
+RLS_lambda(X, Dtrain$total, p = 2, Theta_0 = c(0, 0), lambda = 0.7)
+
+# Plot parameters for different values of λ
+Theta_99 <- RLS_lambda(X, Dtrain$total, p = 2, Theta_0 = c(0, 0), lambda = 0.99)
+Theta_7 <- RLS_lambda(X, Dtrain$total, p = 2, Theta_0 = c(0, 0), lambda = 0.7)
+
+# Plot
+plot(1:nrow(Theta_99), Theta_99[, 1], xlab = "Iteration", ylab = "Intercept", main = "Parameter estimates for different values of λ", type = "l", col = "blue", lwd = 2, ylim = range(c(Theta_99[, 1], Theta_7[, 1])))
+lines(1:nrow(Theta_7), Theta_7[, 1], col = "red", lwd = 2)
+grid() # Add grid lines
+legend("topright", legend = c("Lambda = 0.99", "Lambda = 0.7"), col = c("blue", "red"), lwd = 2)
+
+plot(1:nrow(Theta_99), Theta_99[, 2], xlab = "Iteration", ylab = "Slope", main = "Parameter estimates for different values of λ", type = "l", col = "blue", lwd = 2, ylim = range(c(Theta_99[, 2], Theta_7[, 2])))
+lines(1:nrow(Theta_7), Theta_7[, 2], col = "red", lwd = 2)
+grid() # Add grid lines
+legend("topright", legend = c("Lambda = 0.99", "Lambda = 0.7"), col = c("blue", "red"), lwd = 2)
+
 
 # Compare with WLS estimates
+
+SIGMA <- diag(n)
+
+# Variance-covariance for local model
+# Weights are increasing with time as we value recent observations more
+lambda <- 0.7
+weights <- lambda^((n-1):0)
+
+# Create a diagonal matrix with the weights
+SIGMA <- diag(n)*1/weights
+W = diag(n)*weights
+
+thetaWLS99 <- solve(t(X) %*% W %*% X) %*% t(X) %*% W %*% Dtrain$total
+thetaWLS99
+
+thetaWLS7 <- solve(t(X) %*% W %*% X) %*% t(X) %*% W %*% Dtrain$total
+thetaWLS7
+
 
 # 4.5
 # Make one step-ahead predictions
@@ -401,15 +435,17 @@ compute_k_step_rmse <- function(X, y, k_values, lambda_values) {
     for (k in k_values) {
       # k-step-ahead predictions
       n <- length(y)
-      OneStepPred <- rep(NA, n)
+      k_step_pred <- rep(NA, n)
       
       for (t in (k + 1):n) {
-        OneStepPred[t] <- sum(X[t, ] * Theta[t - k, ])  # Forecast k steps ahead
+        if (t + k - 1 <= n) {
+          k_step_pred[t + k - 1] <- sum(X[t + k - 1, ] * Theta[t, ])  # Forecast k steps ahead
+        }
       }
       
       # Compute residuals
-      residuals <- y - OneStepPred
-      rmse <- sqrt(mean(residuals[(k + 1):n]^2, na.rm = TRUE))
+      residuals <- y - k_step_pred
+      rmse <- sqrt(mean((1 / (n - k)) * residuals[(k + 1):n]^2, na.rm = TRUE))
       
       # Store RMSE
       results$RMSE[results$lambda == lambda & results$k == k] <- rmse
@@ -421,6 +457,7 @@ compute_k_step_rmse <- function(X, y, k_values, lambda_values) {
 
 lambda_values <- seq(0.5, 0.99, by = 0.01)
 k_values <- 1:12  # Forecast horizons
+
 
 # Compute RMSE for each (lambda, k)
 rmse_results <- compute_k_step_rmse(X, Dtrain$total, k_values, lambda_values)
@@ -443,13 +480,19 @@ for(i in k_values){
 }
 
 # Define optimal lambda values for different horizons (k)
-opt_lambda <- c(0.5, 0.5, 0.58, 0.59, 0.59, 0.58, 0.74, 0.74, 0.75, 0.99, 0.99, 0.99)
+opt_lambda <- c(0.5, 0.5, 0.5, 0.58, 0.59, 0.59, 0.58, 0.74, 0.74, 0.75, 0.99, 0.99)
+
+
+# Predict on the test set with optimal lambda values with k steps ahead
 
 # Number of observations
-n <- length(Dtrain$total)
+n <- length(D$total)
 
 # Initialize a dataframe to store k-step predictions
-PredictionMatrix <- data.frame(Year = x, Actual = Dtrain$total)
+PredictionMatrix <- data.frame(Year = D$year, Actual = D$total)
+
+# Merge training and test data
+X <- rbind(X, Xnew)
 
 # Loop through different forecast horizons
 for (i in seq_along(k_values)) {  
@@ -457,13 +500,13 @@ for (i in seq_along(k_values)) {
   lambda_k <- opt_lambda[i]  # Optimal lambda for this horizon
   
   # Apply RLS with optimal lambda
-  Theta <- RLS_lambda(X, Dtrain$total, p = 2, Theta_0 = c(-110, 0), lambda = lambda_k)
+  Theta <- RLS_lambda(X, D$total, p = 2, Theta_0 = c(0, 0), lambda = lambda_k)
   
   # Initialize predictions for this horizon
-  OneStepPred <- rep(NA, n)
+  OneStepPred <- rep(NA,n)
   
   # Compute k-step-ahead predictions
-  for (t in (k + 1):n) {
+  for (t in (k + 1):(n)) {
     OneStepPred[t] <- sum(X[t, ] * Theta[t - 1, ])  
   }
   
@@ -484,44 +527,36 @@ library(ggplot2)
 # Reshape the dataframe for plotting
 PredictionMatrix_long <- gather(PredictionMatrix, key = "Horizon", value = "Prediction", -Year, -Actual)
 
-# Plot
+# Plot with the prediction over the test set as points
+
 ggplot(data = PredictionMatrix_long, aes(x = Year, y = Prediction, color = Horizon)) +
-  geom_line(size = 1) +
-  geom_line(data = PredictionMatrix_long, aes(x = Year, y = Actual, linetype = "Actual"), color = "black", size = 1) +
-  scale_linetype_manual(name = "Legend", values = c("Actual" = "dashed")) +
-  labs(title = "k-step-ahead Predictions with Optimal λ for Different Horizons",
-       x = "Year", y = "Total (millions)", color = "Forecast Horizon (k)") +
-  theme_minimal()
-
-# Plot OLS and WLS
-ggplot() +
+  # Highlight the test set background
+  annotate("rect", xmin = 2024, xmax = Inf, ymin = -Inf, ymax = Inf, alpha = 0.2, fill = "lightgray") +
   # Observed data (training set)
-  geom_point(data = df_train, aes(x = Year, y = Total, color = "Observed"), size = 3) +  
-  geom_line(data = df_train, aes(x = Year, y = Total, color = "Observed"), linetype = "dashed") +  
-  
-  # Predicted data
-  geom_point(data = df_pred, aes(x = Year, y = Total, color = "Predicted"), size = 3) +  
-  geom_line(data = df_pred, aes(x = Year, y = Total, color = "Predicted")) +  
-  
-  # test data
-  geom_point(data = df_test, aes(x = Year, y = Total, color = "Test"), size = 3) +
-  # Fitted regression line (now correctly red)
-  geom_abline(aes(intercept = coef(fit)[1], slope = coef(fit)[2], color = "Fitted Model"), linewidth = 1) +  
-
-  # Confidence interval for predictions
-  geom_ribbon(data = df_pred, aes(x = Year, ymin = lwr, ymax = upr, fill = "Prediction Interval"), alpha = 0.2) +
-  
+  geom_line(data = df_train, aes(x = Year, y = Total, color = "Observed"), linetype = "dashed") +
+  geom_line(data = df_test, aes(x = Year, y = Total, color = "Test"), linetype = 'dashed') +
+  geom_point(data = df_pred, aes(x = Year, y = Total, color = "OLS"), size = 3) +
+  # Predictions for different horizons as lines
+  geom_line(size = 1) +
+  # Predictions for different horizons as points for the last 12 months
+  geom_point(data = PredictionMatrix_long[PredictionMatrix_long$Year >= 2024, ], aes(color = Horizon), size = 2) +
+  # WLS predictions
+  geom_line(data = df_pred_local, aes(x = Year, y = Total, color = "WLS"), linetype = "dotted") +
+  geom_point(data = df_pred_local[df_pred_local$Year >= 2024, ], aes(x = Year, y = Total, color = "WLS"), size = 3) +
+  # OLS trendline
+  geom_abline(intercept = coef(fit)[1], slope = coef(fit)[2], color = "green", linetype = "dotted") +
+  # WLS trendline
+  geom_abline(intercept = theta_hat[1], slope = theta_hat[2], color = "purple", linetype = "dotted") +
   # Labels
-  labs(title = "Total Number of Vehicles in Denmark",
-       x = "Year", y = "Total (millions)", color = "Legend", fill = "Legend") +
-  
+  labs(title = "k-step-ahead Predictions vs. Actual Data vs. WLS and OLS",
+       x = "Year", y = "Total (millions)", color = "Legend") +
   # Define colors for legend
-  scale_color_manual(values = c("Observed" = "blue", "Predicted" = "green", "Fitted Model" = "red")) +
-  scale_fill_manual(values = c("Prediction Interval" = "red")) +
-  
+  scale_color_manual(values = c("Observed" = "blue", "Test" = "red", "OLS" = "green", "WLS" = "purple", 
+                                "k_1_step" = "orange", "k_2_step" = "brown", "k_3_step" = "pink", 
+                                "k_4_step" = "cyan", "k_5_step" = "magenta", "k_6_step" = "yellow", 
+                                "k_7_step" = "gray", "k_8_step" = "black", "k_9_step" = "darkgreen", 
+                                "k_10_step" = "darkblue", "k_11_step" = "darkred", "k_12_step" = "darkorange")) +
   # Minimal theme
   theme_minimal()
-
-
 
 
