@@ -133,3 +133,6 @@ ar_roots(-0.7, -0.3)
 plot_simulations(-0.75, -0.3)
 plot_acf_comparison(-0.75, -0.3, n = 200, lags = 30)
 ar_roots(-0.75, -0.3)
+
+
+# setwd("/Users/nicolinesimonesachmann/Documents/DTU/Times Series Analysis/02147/Assignment 3")
