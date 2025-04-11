@@ -88,3 +88,48 @@ plot_acf_comparison <- function(phi_1, phi_2, n = 200, lags = 30) {
 }
 
 plot_acf_comparison(phi_1, phi_2, n = 200, lags = 30)
+
+# 1.3
+
+# Stationarty function
+ar_roots <- function(phi_1, phi_2) {
+  a <- 1
+  b <- phi_1
+  c <- phi_2
+
+  discriminant <- b^2 - 4 * a * c
+
+  # compute complex roots
+  root1 <- (-b + sqrt(discriminant)) / (2 * a)
+  root2 <- (-b - sqrt(discriminant)) / (2 * a)
+
+  # calculate the modulus of the roots
+  mod1 <- Mod(root1)
+  mod2 <- Mod(root2)
+
+  results <- list(mod1 = mod1, mod2 = mod2)
+  return(results)
+
+}
+
+
+plot_simulations(-0.6, -0.3)
+plot_acf_comparison(-0.6, -0.3, n = 200, lags = 30)
+ar_roots(-0.6, -0.3)
+
+# 1.4
+plot_simulations(0.6, -0.3)
+plot_acf_comparison(0.6, -0.3, n = 200, lags = 30)
+ar_roots(0.6, -0.3)
+
+
+# 1.5
+plot_simulations(-0.7, -0.3)
+plot_acf_comparison(-0.7, -0.3, n = 200, lags = 30)
+ar_roots(-0.7, -0.3)
+
+
+# 1.6
+plot_simulations(-0.75, -0.3)
+plot_acf_comparison(-0.75, -0.3, n = 200, lags = 30)
+ar_roots(-0.75, -0.3)
