@@ -2,7 +2,7 @@
 # ! Perhaps you need to set the working directory!?
 # setwd("/home/pbac/g/course02417/2025/assignment1")
 
-# setwd("C:/Users/sofie/OneDrive/Time Series Analysis/02147")
+setwd("C:/Users/sofie/OneDrive/Time Series Analysis/02147/Assignment 1/Plots")
 D <- read.csv("DST_BIL54.csv")
 str(D)
 
