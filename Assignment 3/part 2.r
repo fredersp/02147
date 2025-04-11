@@ -1,9 +1,5 @@
-# 2 Predicting monthly solar power
-
-# 2.1
+# Set working directory and load data
 setwd("C:/Users/sofie/OneDrive/Time Series Analysis/02147/Assignment 3")
-# Load the data
-# Load the data
 D <- read.csv("datasolar.csv")
 
 # Define model parameters
@@ -17,39 +13,38 @@ D$X <- log(D$power) - mu
 # Preallocate residual vector
 residuals <- rep(NA, nrow(D))
 
-# Compute residuals: t from 13 onward (to get t-12)
-for (t in D) {
-  X_t1 <- D$X[t+1]             # X_t
-  X_tm1 <- D$X[t - 1]        # X_{t-1}
-  X_tm11 <- D$X[t - 11]     # X_{t-11}
-  X_tm12 <- D$X[t - 12]     # X_{t-12}
+# Loop over valid time steps: t = 13 to 35 → residuals for t+1 = 14 to 36
+for (t in 13:(nrow(D) - 1)) {
+  X_t1 <- D$X[t + 1]         # X_{t+1}
+  X_t  <- D$X[t]             # X_t
+  X_tm11 <- D$X[t - 11]      # X_{t-11}
+  X_tm12 <- D$X[t - 12]      # X_{t-12}
 
-  # Predicted X_{t+1|t}
-  # up to t0 = 12, we have no prediction so we use X_pred <- -phi1 * X_tm1
-# and for t > 12 we have X_pred <- -phi1 * X_tm1 -Phi1 * X_tm11 - phi1*Phi1 * X_tm12
-if (t <= 12) {
-    X_pred <- -phi1 * X_tm1
-    } else {
-    X_pred <- -phi1 * X_tm1 - Phi1 * X_tm11 - phi1 * Phi1 * X_tm12
-    }
-  
-  # Residual: actual - predicted
+  # Prediction based on model
+  X_pred <- 0.38 * X_t + 0.94 * X_tm11 - 0.3572 * X_tm12
+
+  # Residual
   residuals[t + 1] <- X_t1 - X_pred
 }
 
-
-
-# Add to data frame
+# Add residuals to data frame
 D$residuals <- residuals
+
+# Check number of non-NA residuals
+sum(!is.na(D$residuals))  # Should now return 23
+
 
 # Plot residuals
 plot(D$residuals, type = "h", main = "One-step Prediction Residuals", ylab = "Residual", xlab = "Time (month)")
 
+
 # Plot ACF
 acf(na.omit(D$residuals), main = "ACF of Residuals")
 
-# Ljung-Box test for white noise
-Box.test(na.omit(D$residuals), lag = 10, type = "Ljung-Box")
-
 # Compare residual variance to theoretical sigma^2 = 0.222
 var(na.omit(D$residuals))
+
+# plot predicted values vs actual values
+plot(D$power, type = "l", col = "blue", main = "Predicted vs Actual Values", ylab = "Value", xlab = "Time (month)")
+lines(D$X + D$residuals, col = "red")
+legend("topright", legend = c("Predicted", "Actual"), col = c("blue", "red"), lty = 1)
