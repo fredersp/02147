@@ -384,7 +384,6 @@ for (t in (order + 1):nrow(D)) {
   }
 }
 
-library(ggplot2)
 
 ggplot(D, aes(x = tdate)) +
   geom_line(aes(y = Ph, color = "Actual")) +
