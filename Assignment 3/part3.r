@@ -369,22 +369,32 @@ predictors  <- c(ph_lags, tdelta_lags, gv_lags)
 formula_str <- paste("Ph ~", paste(predictors, collapse = " + "))
 formula     <- as.formula(formula_str)
 
-# Create a column to store predictions
-D$Ph_sim <- NA
+# Copy actual Ph into Ph_sim to initialize
+D$Ph_sim <- D$Ph
 
-# Start prediction from the point where lagged values are available
+# Loop from where lag values are available
 for (t in (order + 1):nrow(D)) {
+  
+  # 👉 Update Ph lag values using your own simulated values
+  for (k in 1:order) {
+    D[t, paste0("Ph.l", k)] <- D$Ph_sim[t - k]
+  }
+
+  # Use all available data up to time t-1 to fit
   D_hist <- D[1:(t - 1), c("Ph", predictors)]
   D_hist <- na.omit(D_hist)
 
   if (nrow(D_hist) >= 3) {
     fit <- lm(formula, data = D_hist)
+
+    # Create new input for time t using updated simulated lags
     new_data <- as.data.frame(D[t, predictors])
+
+    # Predict and store in Ph_sim
     D$Ph_sim[t] <- predict(fit, newdata = new_data)
   }
 }
-
-
+# Plot actual vs simulated
 ggplot(D, aes(x = tdate)) +
   geom_line(aes(y = Ph, color = "Actual")) +
   geom_line(aes(y = Ph_sim, color = "Simulated"), linewidth = 1) +
@@ -392,3 +402,7 @@ ggplot(D, aes(x = tdate)) +
        x = "Time", y = "Ph", color = "Legend") +
   scale_color_manual(values = c("Actual" = "black", "Simulated" = "darkgreen")) +
   theme_minimal(base_size = 14)
+
+# RMSE
+rmse_sim <- rmse(D$Ph[(order + 1):nrow(D)], D$Ph_sim[(order + 1):nrow(D)])
+print(paste("RMSE for simulated values:", round(rmse_sim, 2)))
