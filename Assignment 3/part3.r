@@ -290,3 +290,67 @@ ggplot(model_metrics_long, aes(x = Order, y = Value, color = Metric)) +
        x = "Model Order", y = "Information Criterion", color = "Metric") +
   scale_color_manual(values = c("AIC" = "blue", "BIC" = "red")) +
   theme_minimal(base_size = 14)
+
+
+###########################################################
+# 3.8
+###########################################################
+
+install.packages("Metrics")
+library(Metrics)  # for rmse()
+
+max_order <- 9
+
+# Create data frame to store results
+model_metrics <- data.frame(Order = integer(), RMSE = numeric())
+all_preds <- data.frame()
+# Loop through model orders
+for (order in 1:max_order) {
+  
+  # Define column names
+  ph_lags <- paste0("Ph.l", 1:order)
+  tdelta_lags <- paste0("Tdelta.l", 0:(order - 1))
+  gv_lags <- paste0("Gv.l", 0:(order - 1))
+  
+  # Combine into formula
+  predictors <- c(ph_lags, tdelta_lags, gv_lags)
+  formula_str <- paste("Ph ~", paste(predictors, collapse = " + "))
+  formula <- as.formula(formula_str)
+  
+  # Fit model on training set
+  fit <- lm(formula, data = Dtrain)
+  
+  # Predict on test set
+  preds <- predict(fit, newdata = Dtest)
+  temp_df <- data.frame(
+  tdate = Dtest$tdate,
+  Actual = Dtest$Ph,
+  Predicted = preds,
+  Order = paste0("Order ", order)
+)
+
+all_preds <- rbind(all_preds, temp_df)
+  
+  # Compute RMSE
+  rmse_val <- rmse(Dtest$Ph, preds)
+  
+  # Store results
+  model_metrics <- rbind(model_metrics, data.frame(
+    Order = order,
+    RMSE = rmse_val
+  ))
+}
+
+ggplot(all_preds, aes(x = tdate)) +
+  geom_line(aes(y = Actual), color = "black", size = 0.8) +
+  geom_line(aes(y = Predicted, color = Order), linewidth = 0.8) +
+  labs(title = "Actual vs Predicted Heating Power (Test Set)",
+       x = "Time", y = "Ph [W]", color = "Model Order") +
+  theme_minimal(base_size = 14)
+
+  ggplot(model_metrics, aes(x = Order, y = RMSE)) +
+  geom_line(color = "darkred", linewidth = 1.2) +
+  geom_point(size = 2, color = "darkred") +
+  labs(title = "RMSE vs ARX Model Order",
+       x = "Model Order", y = "RMSE on Test Set") +
+  theme_minimal(base_size = 14)
