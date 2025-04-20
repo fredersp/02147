@@ -6,8 +6,8 @@ hgd()
 
 
 # Set working directory and load data
-setwd("C:/Users/sofie/OneDrive/Time Series Analysis/02147/Assignment 3")
-#setwd("/Users/nicolinesimonesachmann/Documents/DTU/Times Series Analysis/02147/Assignment 3")
+#setwd("C:/Users/sofie/OneDrive/Time Series Analysis/02147/Assignment 3")
+setwd("/Users/nicolinesimonesachmann/Documents/DTU/Times Series Analysis/02147/Assignment 3")
 
 D <- read.csv("box_data_60min.csv")
 
@@ -75,77 +75,99 @@ acf(Dtrain$Ph, lag.max = 30, main = "ACF of Ph")
 ###########################################################
 # 3.4
 ###########################################################
-install.packages("onlineforecast")
-library(onlineforecast)
-install.packages("patchwork")
-library(patchwork)
+# #install.packages("onlineforecast")
+# library(onlineforecast)
+# #install.packages("patchwork")
+# library(patchwork)
 
-# Define input and output for one system (e.g., Tdelta → Ph)
-x_Tdelta <- Dtrain$Tdelta
-x_Gv <- Dtrain$Gv
-y <- Dtrain$Ph
+# # Define input and output for one system (e.g., Tdelta → Ph)
+# x_Tdelta <- Dtrain$Tdelta
+# x_Gv <- Dtrain$Gv
+# y <- Dtrain$Ph
 
-# Set maximum lag
-p <- 30
+# # Set maximum lag
+# p <- 30
 
-# Create lag matrix
-X_lags_Tdelta <- lagdf(x_Tdelta, 0:p)
-X_lags_Gv <- lagdf(x_Gv, 0:p)
+# # Create lag matrix
+# X_lags_Tdelta <- lagdf(x_Tdelta, 0:p)
+# X_lags_Gv <- lagdf(x_Gv, 0:p)
 
-# Fit least squares regression (impulse response)
-D_model_Tdelta <- as.data.frame(cbind(y = y, X_lags_Tdelta))
-D_model_Gv <- as.data.frame(cbind(y = y, X_lags_Gv))
+# # Fit least squares regression (impulse response)
+# D_model_Tdelta <- as.data.frame(cbind(y = y, X_lags_Tdelta))
+# D_model_Gv <- as.data.frame(cbind(y = y, X_lags_Gv))
 
-form <- paste0("y ~ 0 + ", paste0("k", 0:p, collapse = " + "))
+# form <- paste0("y ~ 0 + ", paste0("k", 0:p, collapse = " + "))
 
-fit_Tdelta <- lm(form, data = D_model_Tdelta)
-fit_Gv <- lm(form, data = D_model_Gv)
+# fit_Tdelta <- lm(form, data = D_model_Tdelta)
+# fit_Gv <- lm(form, data = D_model_Gv)
 
 
-# Extract impulse response coefficients
-ir_Tdelta <- data.frame(
-  Lag = 0:p,
-  IR = coef(fit_Tdelta),
-  Variable = "Tdelta"
-)
+# # Extract impulse response coefficients
+# ir_Tdelta <- data.frame(
+#   Lag = 0:p,
+#   IR = coef(fit_Tdelta),
+#   Variable = "Tdelta"
+# )
 
-ir_Gv <- data.frame(
-  Lag = 0:p,
-  IR = coef(fit_Gv),
-  Variable = "Gv"
-)
+# ir_Gv <- data.frame(
+#   Lag = 0:p,
+#   IR = coef(fit_Gv),
+#   Variable = "Gv"
+# )
 
-# Base text size
-base_size <- 30
+# # Base text size
+# base_size <- 30
+
+# # Tdelta → Ph
+# plot_Tdelta <- ggplot(ir_Tdelta, aes(x = Lag, y = IR)) +
+#   geom_col(fill = "steelblue", width = 0.4) +
+#   geom_hline(yintercept = 0, color = "gray") +
+#   labs(title = "Impulse Response: Tdelta → Ph",
+#        x = "Lag", y = "Estimated Effect") +
+#   theme_minimal(base_size = base_size) +
+#   theme(
+#     plot.title = element_text(size = 26, face = "bold"),
+#     axis.title = element_text(size = 26),
+#     axis.text = element_text(size = 26)
+#   )
+
+# # Gv → Ph
+# plot_Gv <- ggplot(ir_Gv, aes(x = Lag, y = IR)) +
+#   geom_col(fill = "seagreen", width = 0.4) +
+#   geom_hline(yintercept = 0, color = "gray") +
+#   labs(title = "Impulse Response: Gv → Ph",
+#        x = "Lag", y = "Estimated Effect") +
+#   theme_minimal(base_size = base_size) +
+#   theme(
+#     plot.title = element_text(size = 26, face = "bold"),
+#     axis.title = element_text(size = 26),
+#     axis.text = element_text(size = 26)
+#   )
+
+
+# plot_Tdelta + plot_Gv
+
+
+####### 3.4 andet forsøg #####
+
+# Plot CCFs from Tdelta and Gv to Ph, limited to lag 10
+
+par(mfrow = c(2, 1), mar = c(4, 4, 4, 1))  # ← increased top margin from 2 to 4
 
 # Tdelta → Ph
-plot_Tdelta <- ggplot(ir_Tdelta, aes(x = Lag, y = IR)) +
-  geom_col(fill = "steelblue", width = 0.4) +
-  geom_hline(yintercept = 0, color = "gray") +
-  labs(title = "Impulse Response: Tdelta → Ph",
-       x = "Lag", y = "Estimated Effect") +
-  theme_minimal(base_size = base_size) +
-  theme(
-    plot.title = element_text(size = 26, face = "bold"),
-    axis.title = element_text(size = 26),
-    axis.text = element_text(size = 26)
-  )
+ccf(Dtrain$Tdelta, Dtrain$Ph, lag.max = 10,
+    main = "Impulse Response from Tdelta to Ph (via CCF)",
+    ylab = "ACF", xlab = "Lag")
 
 # Gv → Ph
-plot_Gv <- ggplot(ir_Gv, aes(x = Lag, y = IR)) +
-  geom_col(fill = "seagreen", width = 0.4) +
-  geom_hline(yintercept = 0, color = "gray") +
-  labs(title = "Impulse Response: Gv → Ph",
-       x = "Lag", y = "Estimated Effect") +
-  theme_minimal(base_size = base_size) +
-  theme(
-    plot.title = element_text(size = 26, face = "bold"),
-    axis.title = element_text(size = 26),
-    axis.text = element_text(size = 26)
-  )
+ccf(Dtrain$Gv, Dtrain$Ph, lag.max = 10,
+    main = "Impulse Response from Gv to Ph (via CCF)",
+    ylab = "ACF", xlab = "Lag")
 
+## Cross 3.3
+ccf(Dtrain$Tdelta, Dtrain$Ph, lag.max = 30, main = "CCF: Tdelta vs Ph")
+ccf(Dtrain$Gv, Dtrain$Ph, lag.max = 30, main = "CCF: Gv vs Ph")
 
-plot_Tdelta + plot_Gv
 
 ###########################################################
 # 3.5
