@@ -38,7 +38,6 @@ X <- X_list[[1]]
 sigma2 <- 1
 
 # Simulate noisy observations
-set.seed(123)
 Y <- X + rnorm(length(X), mean = 0, sd = sigma2)
 
 # Plot state and observation
@@ -48,3 +47,6 @@ plot(X, type = "l", col = "blue", lwd = 2,
 lines(Y, col = "red", lwd = 1.5, lty = 2)
 legend("topleft", legend = c("State X_t", "Observation Y_t"),
        col = c("blue", "red"), lty = c(1, 2), lwd = 2)
+
+
+# Task 1.3
