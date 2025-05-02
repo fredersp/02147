@@ -145,3 +145,91 @@ legend("topleft",
        col = c("black", "darkgray", "blue", rgb(0.2, 0.4, 1, alpha = 0.5)),
        lty = c(1, 2, 1, NA), lwd = c(2, 1, 2, NA), pch = c(NA, NA, NA, 15),
        pt.cex = 2, bty = "n")
+
+
+# Task 1.4
+
+myLogLikFun <- function(theta, Y, R, X0, P0) {
+  a <- theta[1]
+  b <- theta[2]
+  sigma1 <- theta[3]
+  
+  N <- length(Y)
+  
+  # Run Kalman filter
+  kf <- myKalmanFilter(y = Y, theta = theta, R = R, x_prior = X0, P_prior = P0)
+  
+  # Compute log-likelihood
+  loglik <- 0
+  for (t in 1:N) {
+    nu_t <- kf$innovation[t]
+    S_t <- kf$innovation_var[t]
+    loglik <- loglik + dnorm(nu_t, mean = 0, sd = sqrt(S_t), log = TRUE)
+  }
+  
+  # Return NEGATIVE log-likelihood for minimization
+  return(-loglik)
+}
+
+set.seed(42)  # for reproducibility
+
+# True parameters
+a_true <- 1
+b_true <- 0.9
+sigma1_true <- 1
+sigma2 <- 1  # known
+n <- 100
+n_sim <- 100
+
+# Storage for parameter estimates
+results <- matrix(NA, nrow = n_sim, ncol = 3)
+colnames(results) <- c("a_hat", "b_hat", "sigma1_hat")
+
+# Simulation function (you already have this)
+simulate_data <- function(n, a, b, sigma1, sigma2) {
+  X <- numeric(n)
+  Y <- numeric(n)
+  X[1] <- 0
+  Y[1] <- X[1] + rnorm(1, 0, sigma2)
+  for (t in 2:n) {
+    X[t] <- a * X[t - 1] + b + rnorm(1, 0, sigma1)
+    Y[t] <- X[t] + rnorm(1, 0, sigma2)
+  }
+  list(X = X, Y = Y)
+}
+
+
+# Run the simulations and estimation
+for (i in 1:n_sim) {
+  sim <- simulate_data(n, a_true, b_true, sigma1_true, sigma2)
+  
+  est <- optim(par = c(0.5, 0.5, 0.5), fn = myLogLikFun,
+               Y = sim$Y, R = sigma2^2, X0 = 0, P0 = 10,
+               method = "L-BFGS-B", lower = c(1/1000, 1/1000, 1/1000))
+  print(est$par)  # Print estimated parameters for each simulation
+  
+  results[i, ] <- est$par
+}
+
+# Convert to data frame
+results_df <- as.data.frame(results)
+
+# Plot results
+library(ggplot2)
+library(tidyr)
+
+results_long <- pivot_longer(results_df, cols = everything(), names_to = "parameter", values_to = "estimate")
+
+ggplot(results_long, aes(x = parameter, y = estimate)) +
+  geom_boxplot(fill = "lightblue") +
+  geom_hline(data = data.frame(parameter = c("a_hat", "b_hat", "sigma1_hat"),
+                               true = c(a_true, b_true, sigma1_true)),
+             aes(yintercept = true), linetype = "dashed", color = "red") +
+  labs(title = "Parameter Estimates from 100 Simulations",
+       x = "Parameter", y = "Estimated Value") +
+  theme_minimal(base_size = 14)
+
+
+
+
+  
