@@ -1,5 +1,6 @@
-library(httpgd)
-hgd() 
+#library(httpgd)
+#hgd() 
+
 # Task 1.1.1
 
 # Parameters
@@ -26,3 +27,33 @@ for (j in 1:5) {
 matplot(1:n, do.call(cbind, X_list), type = "l", lty = 1, col = 1:5,
         xlab = "Time", ylab = "State X_t", main = "5 Simulated Realizations of X_t")
 legend("topleft", legend = paste("Run", 1:5), col = 1:5, lty = 1)
+
+
+# Task 1.2
+
+# Parameters (same as before)
+a <- 0.9
+b <- 1
+sigma1 <- 1  # Process noise
+sigma2 <- 1  # Observation noise
+n <- 100
+X0 <- 5
+
+# Simulate one trajectory
+X <- numeric(n)
+Y <- numeric(n)
+X[1] <- X0
+Y[1] <- X[1] + rnorm(1, mean = 0, sd = sigma2)
+
+for (t in 2:n) {
+  X[t] <- a * X[t - 1] + b + rnorm(1, mean = 0, sd = sigma1)  # state
+  Y[t] <- X[t] + rnorm(1, mean = 0, sd = sigma2)              # observation
+}
+
+# Plot state and observation
+plot(X, type = "l", col = "blue", lwd = 2,
+     ylim = range(c(X, Y)), xlab = "Time", ylab = "Value",
+     main = "Latent State $X_t$ and Noisy Observations $Y_t$")
+lines(Y, col = "red", lwd = 1.5, lty = 2)
+legend("topleft", legend = c("State X_t", "Observation Y_t"),
+       col = c("blue", "red"), lty = c(1, 2), lwd = 2)
