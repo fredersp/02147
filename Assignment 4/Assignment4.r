@@ -31,24 +31,15 @@ legend("topleft", legend = paste("Run", 1:5), col = 1:5, lty = 1)
 
 # Task 1.2
 
-# Parameters (same as before)
-a <- 0.9
-b <- 1
-sigma1 <- 1  # Process noise
-sigma2 <- 1  # Observation noise
-n <- 100
-X0 <- 5
+# Use first trajectory from Task 1.1
+X <- X_list[[1]]
 
-# Simulate one trajectory
-X <- numeric(n)
-Y <- numeric(n)
-X[1] <- X0
-Y[1] <- X[1] + rnorm(1, mean = 0, sd = sigma2)
+# Observation noise
+sigma2 <- 1
 
-for (t in 2:n) {
-  X[t] <- a * X[t - 1] + b + rnorm(1, mean = 0, sd = sigma1)  # state
-  Y[t] <- X[t] + rnorm(1, mean = 0, sd = sigma2)              # observation
-}
+# Simulate noisy observations
+set.seed(123)
+Y <- X + rnorm(length(X), mean = 0, sd = sigma2)
 
 # Plot state and observation
 plot(X, type = "l", col = "blue", lwd = 2,
