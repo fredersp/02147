@@ -32,7 +32,7 @@ legend("topleft", legend = paste("Run", 1:5), col = 1:5, lty = 1)
 # Task 1.2
 
 # Use first trajectory from Task 1.1
-X <- X_list[[1]]
+X <- X_list[[2]]
 
 # Observation noise
 sigma2 <- 1
@@ -58,7 +58,7 @@ myKalmanFilter <- function(
   theta,         # Model parameters for X_{t+1} = a*X_t + b + e_t
   R,             # Measurement noise variance
   x_prior = 0,   # Initial prior mean for X_0
-  P_prior = 10   # Initial prior variance for X_0
+  P_prior = 5   # Initial prior variance for X_0
 ) {
 
 
@@ -88,7 +88,7 @@ myKalmanFilter <- function(
     # Update step
     innovation[t] <- y[t] - x_pred[t]
     innovation_var[t] <- P_pred[t] + R
-    K_t <- P_pred[t] / innovation_var[t]  # Kalman gain
+    K_t <- P_pred[t] / innovation_var[t]  # Kalman gain: how much to trust observation
 
     x_filt[t] <- x_pred[t] + K_t * innovation[t]
     P_filt[t] <- (1 - K_t) * P_pred[t]
@@ -108,7 +108,7 @@ myKalmanFilter <- function(
 theta <- c(a, b, sigma1)  # a = 0.9, b = 1, sigma1 = 1 from Task 1.1
 R <- sigma2               # Measurement noise variance = 1
 X0 <- 5                   # Prior mean (could also use 5, as in simulation)
-P0 <- 10                  # Prior variance
+P0 <- 2                  # Prior variance
 
 # Run the Kalman filter
 result <- myKalmanFilter(Y, theta, R, X0, P0)
