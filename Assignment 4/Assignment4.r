@@ -58,7 +58,7 @@ myKalmanFilter <- function(
   theta,         # Model parameters for X_{t+1} = a*X_t + b + e_t
   R,             # Measurement noise variance
   x_prior = 0,   # Initial prior mean for X_0
-  P_prior = 5   # Initial prior variance for X_0
+  P_prior = 10   # Initial prior variance for X_0
 ) {
 
 
@@ -108,7 +108,7 @@ myKalmanFilter <- function(
 theta <- c(a, b, sigma1)  # a = 0.9, b = 1, sigma1 = 1 from Task 1.1
 R <- sigma2               # Measurement noise variance = 1
 X0 <- 5                   # Prior mean (could also use 5, as in simulation)
-P0 <- 2                  # Prior variance
+P0 <- 10                  # Prior variance
 
 # Run the Kalman filter
 result <- myKalmanFilter(Y, theta, R, X0, P0)
