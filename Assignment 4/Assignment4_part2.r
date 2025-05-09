@@ -1,5 +1,5 @@
-#library(httpgd)
-#hgd() 
+library(httpgd)
+hgd() 
 
 
 # Load necessary libraries
@@ -13,7 +13,14 @@ setwd("/Users/nicolinesimonesachmann/Documents/DTU/Times Series Analysis/02147/A
 # If needed, load your dataset
 df <- read.csv("transformer_data.csv")
 
-
+# Rename columns for clarity (optional, but helpful)
+df <- df %>%
+  rename(
+    Yt = Y,
+    Ta_t = Ta,
+    Phi_s_t = S,
+    Phi_I_t = I
+  )
 
 
 # Check structure
@@ -33,3 +40,4 @@ ggplot(df_long, aes(x = time, y = value, color = variable)) +
        x = "Time (hours)",
        y = "Value") +
   theme_minimal()
+
