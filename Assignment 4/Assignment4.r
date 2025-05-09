@@ -1,5 +1,5 @@
-#library(httpgd)
-#hgd() 
+library(httpgd)
+hgd() 
 
 # Task 1.1.1
 
@@ -147,31 +147,138 @@ legend("topleft",
        pt.cex = 2, bty = "n")
 
 
-# Task 1.4
+#################### Task 1.4
 
-myLogLikFun <- function(theta, Y, R, X0, P0) {
+# myLogLikFun <- function(theta, Y, R, X0, P0) {
+#   a <- theta[1]
+#   b <- theta[2]
+#   sigma1 <- theta[3]
+  
+#   N <- length(Y)
+  
+#   # Run Kalman filter
+#   kf <- myKalmanFilter(y = Y, theta = theta, R = R, x_prior = X0, P_prior = P0)
+  
+#   # Compute log-likelihood
+#   loglik <- 0
+#   for (t in 1:N) {
+#     nu_t <- kf$innovation[t]
+#     S_t <- kf$innovation_var[t]
+#     loglik <- loglik + dnorm(nu_t, mean = 0, sd = sqrt(S_t), log = TRUE)
+#   }
+  
+#   # Return NEGATIVE log-likelihood for minimization
+#   return(-loglik)
+# }
+
+myLogLikFun <- function(theta, y, R, x_prior = 0, P_prior = 10) {
   a <- theta[1]
   b <- theta[2]
   sigma1 <- theta[3]
   
-  N <- length(Y)
+  N <- length(y)
   
   # Run Kalman filter
-  kf <- myKalmanFilter(y = Y, theta = theta, R = R, x_prior = X0, P_prior = P0)
+  kf <- myKalmanFilter(y = y, theta = theta, R = R, x_prior = x_prior, P_prior = P_prior)
   
   # Compute log-likelihood
   loglik <- 0
   for (t in 1:N) {
     nu_t <- kf$innovation[t]
     S_t <- kf$innovation_var[t]
+    
+    if (S_t <= 0 || is.na(S_t)) return(Inf)  # Prevent invalid density calc
+    
     loglik <- loglik + dnorm(nu_t, mean = 0, sd = sqrt(S_t), log = TRUE)
   }
   
-  # Return NEGATIVE log-likelihood for minimization
-  return(-loglik)
+  return(-loglik)  # NEGATIVE log-likelihood
 }
 
+
 set.seed(42)  # for reproducibility
+
+simulate_and_estimate <- function(a_true, b_true, sigma1_true, n = 100, reps = 100) {
+  estimates <- matrix(NA, nrow = reps, ncol = 3)  # Store a, b, sigma1
+  colnames(estimates) <- c("a", "b", "sigma1")
+  
+  for (i in 1:reps) {
+    # Simulate latent state
+    X <- numeric(n)
+    X[1] <- 0
+    for (t in 2:n) {
+      X[t] <- a_true * X[t - 1] + b_true + rnorm(1, 0, sigma1_true)
+    }
+
+    # Simulate noisy observations
+    Y <- X + rnorm(n, 0, 1)  # sigma2 = 1
+
+    # Initial guess for optimization
+    init_theta <- c(0.5, 0.5, 1)
+
+    # Try to estimate parameters with optim
+    result <- tryCatch({
+      optim(
+        par = init_theta,
+        fn = myLogLikFun,
+        y = Y,
+        R = 1,
+        x_prior = 0,
+        P_prior = 10,
+        method = "L-BFGS-B",
+        lower = c(-2, -2, 0.01),
+        upper = c(10, 10, 10)
+      )
+    }, error = function(e) NULL)
+
+    # Save result if optimization succeeded
+    if (!is.null(result) && !is.null(result$par)) {
+      estimates[i, ] <- result$par
+    }
+  }
+
+  return(as.data.frame(estimates))
+}
+
+res1 <- simulate_and_estimate(1, 0.9, 1, n = 100, reps = 100)
+summary(res)
+
+res2 <- simulate_and_estimate(5, 0.9, 1, n = 100, reps = 100)
+summary(res2)
+
+res3 <- simulate_and_estimate(1, 0.9, 5, n = 100, reps = 100)
+summary(res3)
+
+
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+
+# Function to plot estimation results against true values
+plot_estimation_results <- function(estimates_df, true_values, title = "Parameter Estimation") {
+  
+  # Convert to long format
+  long <- pivot_longer(estimates_df, cols = c("a", "b", "sigma1"), names_to = "parameter", values_to = "estimate")
+  
+  # Add true value lookup
+  true_df <- data.frame(parameter = names(true_values), true = unname(true_values))
+  
+  ggplot(long, aes(x = parameter, y = estimate, fill = parameter)) +
+    geom_boxplot(outlier.shape = NA, alpha = 0.6) +
+    geom_jitter(width = 0.1, size = 1, alpha = 0.4) +
+    geom_point(data = true_df, aes(x = parameter, y = true), color = "red", size = 3, shape = 18) +
+    labs(title = title, y = "Estimated Value", x = "Parameter") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+}
+
+
+plot_estimation_results(res1, c(a = 1, b = 0.9, sigma1 = 1), title = "Estimation Results for a=1, b=0.9, sigma1=1")
+plot_estimation_results(res2, c(a = 5, b = 0.9, sigma1 = 1), title = "Estimation Results for a=5, b=0.9, sigma1=1")
+plot_estimation_results(res3, c(a = 1, b = 0.9, sigma1 = 5), title = "Estimation Results for a=1, b=0.9, sigma1=5")
+
+
+# SOF ###
 
 # True parameters
 a_true <- 1
