@@ -260,6 +260,7 @@ kalman_predict_2D <- function(par, data) {
 }
 
 # Initial parameters
+# lEG MED VÆRDIERNE HER, LIGE NU ER INTIAL GUESS SAT TIL 10
 start_par_2D <- c(
   0.9, 0.0,
   0.0, 0.9,
@@ -268,10 +269,8 @@ start_par_2D <- c(
   1, 0,
   0.1, 0.05, 0.1,
   0.1,
-  20, 0
+  10, 0
 )
-
-# Vi skal justere vores intial parameters, da den perforer dårligt til at starte med
 
 
 lower_2D <- c(rep(-1, 12), rep(1e-6, 7))
@@ -280,7 +279,10 @@ upper_2D <- c(rep(1, 12), rep(10, 7))
 # Fit 2D model
 
 max_retries <- 5
-fit_2D <- estimate_dt_2D(start_par_2D, data, lower = lower_2D, upper = upper_2D)
+
+# KØR DENNE LINJE FØRST OG EFTERFØLGENDE LOOPET NEDENUNDER 
+fit_2D <- estimate_dt_2D(start_par_2D, data, lower = lower_2D, upper = upper_2D) 
+# DETTE ER FOR AT SIKRE AT OPTIMERINGEN IKKE CHRASHER
 
 for (i in 1:max_retries) {
   if (fit_2D$convergence == 0) break
@@ -383,4 +385,4 @@ ggplot(state_estimates_df, aes(x = time)) +
        x = "Time (hours)", y = "State Value", color = "") +
   scale_color_manual(values = c("State 1" = "blue", "State 2" = "red")) +
   theme_minimal(base_size = 14)
-
+# Den anden state space kunne ligne noget køling
