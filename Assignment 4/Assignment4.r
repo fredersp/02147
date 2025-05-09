@@ -241,7 +241,7 @@ simulate_and_estimate <- function(a_true, b_true, sigma1_true, n = 100, reps = 1
 }
 
 res1 <- simulate_and_estimate(1, 0.9, 1, n = 100, reps = 100)
-summary(res)
+summary(res1)
 
 res2 <- simulate_and_estimate(5, 0.9, 1, n = 100, reps = 100)
 summary(res2)
@@ -277,66 +277,6 @@ plot_estimation_results(res1, c(a = 1, b = 0.9, sigma1 = 1), title = "Estimation
 plot_estimation_results(res2, c(a = 5, b = 0.9, sigma1 = 1), title = "Estimation Results for a=5, b=0.9, sigma1=1")
 plot_estimation_results(res3, c(a = 1, b = 0.9, sigma1 = 5), title = "Estimation Results for a=1, b=0.9, sigma1=5")
 
-
-# SOF ###
-
-# True parameters
-a_true <- 1
-b_true <- 0.9
-sigma1_true <- 1
-sigma2 <- 1  # known
-n <- 100
-n_sim <- 100
-
-# Storage for parameter estimates
-results <- matrix(NA, nrow = n_sim, ncol = 3)
-colnames(results) <- c("a_hat", "b_hat", "sigma1_hat")
-
-# Simulation function (you already have this)
-simulate_data <- function(n, a, b, sigma1, sigma2) {
-  X <- numeric(n)
-  Y <- numeric(n)
-  X[1] <- 0
-  Y[1] <- X[1] + rnorm(1, 0, sigma2)
-  for (t in 2:n) {
-    X[t] <- a * X[t - 1] + b + rnorm(1, 0, sigma1)
-    Y[t] <- X[t] + rnorm(1, 0, sigma2)
-  }
-  list(X = X, Y = Y)
-}
-
-
-# Run the simulations and estimation
-for (i in 1:n_sim) {
-  sim <- simulate_data(n, a_true, b_true, sigma1_true, sigma2)
-  
-  est <- optim(par = c(0.5, 0.5, 0.5), fn = myLogLikFun,
-               Y = sim$Y, R = sigma2^2, X0 = 0, P0 = 10,
-               method = "L-BFGS-B", lower = c(1/1000, 1/1000, 1/1000))
-  print(est$par)  # Print estimated parameters for each simulation
-  
-  results[i, ] <- est$par
-}
-
-# Convert to data frame
-results_df <- as.data.frame(results)
-
-# Plot results
-library(ggplot2)
-library(tidyr)
-
-results_long <- pivot_longer(results_df, cols = everything(), names_to = "parameter", values_to = "estimate")
-
-ggplot(results_long, aes(x = parameter, y = estimate)) +
-  geom_boxplot(fill = "lightblue") +
-  geom_hline(data = data.frame(parameter = c("a_hat", "b_hat", "sigma1_hat"),
-                               true = c(a_true, b_true, sigma1_true)),
-             aes(yintercept = true), linetype = "dashed", color = "red") +
-  labs(title = "Parameter Estimates from 100 Simulations",
-       x = "Parameter", y = "Estimated Value") +
-  theme_minimal(base_size = 14)
-
-
 # Task 1.5
 # So far, you have assumed that both system and observation noise are Gaussian. In this exercise,
 # you will challenge this assumption by simulating system noise from a Student’s t-distribution instead. 
@@ -368,15 +308,19 @@ n_sim <- 100
 dfs <- c(100, 5, 2, 1)
 
 # Run simulation and collect final Xt's across all 100 simulations
-sim_results <- list()
+sim_results_X <- list()
+sim_results_Y <- list()
 
 for (df in dfs) {
   all_X <- matrix(NA, nrow = n_sim, ncol = n)
+  all_Y <- matrix(NA, nrow = n_sim, ncol = n)
   for (i in 1:n_sim) {
     sim <- simulate_t_model(n, a, b, sigma1, sigma2, df)
     all_X[i, ] <- sim$X
+    all_Y[i, ] <- sim$Y
   }
-  sim_results[[paste0("df_", df)]] <- all_X
+  sim_results_X[[paste0("df_", df)]] <- all_X
+  sim_results_Y[[paste0("df_", df, "_Y")]] <- all_Y
 }
 
 # Plot density of t-distribution for each df vs. standard normal
@@ -394,4 +338,82 @@ legend("topright",
        col = c("black", colors), lty = 1, lwd = 2)
 
 
+# estimate parameters using Kalman filter and simulated data by student's t-distribution
+
+estimate_t_params <- function(Y, R, X0, P0, df = NULL) {
+  init_theta <- c(0.5, 0.5, 1)
   
+  result <- tryCatch({
+    optim(
+      par = init_theta,
+      fn = myLogLikFun,
+      y = Y,
+      R = R,
+      x_prior = X0,
+      P_prior = P0,
+      method = "L-BFGS-B",
+      lower = c(-2, -2, 0.01),
+      upper = c(10, 10, 10)
+    )
+  }, error = function(e) list(par = rep(NA, 3)))  # Safe fallback
+  
+  return(result$par)
+}
+
+param_estimates <- list()
+
+for (df in dfs) {
+  estimates_df <- matrix(NA, nrow = n_sim, ncol = 3)
+  colnames(estimates_df) <- c("a_hat", "b_hat", "sigma1_hat")
+  
+  for (i in 1:n_sim) {
+    Y <- sim_results_Y[[paste0("df_", df, "_Y")]][i, ]
+    estimates_df[i, ] <- estimate_t_params(Y, R = sigma2^2, X0 = 0, P0 = 10)
+  }
+  
+  param_estimates[[paste0("df_", df)]] <- as.data.frame(estimates_df)
+}
+
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# Combine into one data frame with an added 'df' column
+all_estimates <- bind_rows(
+  lapply(names(param_estimates), function(name) {
+    df_val <- sub("df_", "", name)
+    df <- as.numeric(df_val)
+    cbind(param_estimates[[name]], df = df)
+  }),
+  .id = "group"
+)
+
+# Pivot longer to tidy format
+estimates_long <- pivot_longer(all_estimates, cols = starts_with("a_hat"):starts_with("sigma1_hat"),
+                               names_to = "parameter", values_to = "estimate")
+ggplot(estimates_long, aes(x = factor(df), y = estimate)) +
+  geom_boxplot(fill = "lightblue") +
+  facet_wrap(~parameter, scales = "free_y") +
+  labs(
+    title = "Parameter Estimates for Different Degrees of Freedom (Student's t Noise)",
+    x = "Degrees of Freedom (ν)",
+    y = "Estimated Value"
+  ) +
+  theme_minimal(base_size = 14)
+
+true_values <- data.frame(
+  parameter = c("a_hat", "b_hat", "sigma1_hat"),
+  true = c(1, 0.9, 1)
+)
+
+ggplot(estimates_long, aes(x = factor(df), y = estimate)) +
+  geom_boxplot(fill = "lightblue") +
+  facet_wrap(~parameter, scales = "free_y") +
+  geom_hline(data = true_values, aes(yintercept = true), linetype = "dashed", color = "red") +
+  labs(
+    title = "Parameter Estimates vs True Values for Different ν",
+    x = "Degrees of Freedom (ν)",
+    y = "Estimated Value"
+  ) +
+  theme_minimal(base_size = 14)
