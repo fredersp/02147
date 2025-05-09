@@ -122,7 +122,8 @@ ci_upper <- x_pred + 1.96 * sqrt(P_pred)
 ci_lower <- x_pred - 1.96 * sqrt(P_pred)
 
 # Time vector
-time <- 1:length(Y)
+#time <- 1:length(Y)
+time <- seq(1, length(Y), by = 1)
 
 # Plot everything
 plot(time, X, type = "l", lwd = 2, col = "black", ylim = range(c(X, Y, ci_upper, ci_lower)),
@@ -148,28 +149,6 @@ legend("topleft",
 
 
 #################### Task 1.4
-
-# myLogLikFun <- function(theta, Y, R, X0, P0) {
-#   a <- theta[1]
-#   b <- theta[2]
-#   sigma1 <- theta[3]
-  
-#   N <- length(Y)
-  
-#   # Run Kalman filter
-#   kf <- myKalmanFilter(y = Y, theta = theta, R = R, x_prior = X0, P_prior = P0)
-  
-#   # Compute log-likelihood
-#   loglik <- 0
-#   for (t in 1:N) {
-#     nu_t <- kf$innovation[t]
-#     S_t <- kf$innovation_var[t]
-#     loglik <- loglik + dnorm(nu_t, mean = 0, sd = sqrt(S_t), log = TRUE)
-#   }
-  
-#   # Return NEGATIVE log-likelihood for minimization
-#   return(-loglik)
-# }
 
 myLogLikFun <- function(theta, y, R, x_prior = 0, P_prior = 10) {
   a <- theta[1]
