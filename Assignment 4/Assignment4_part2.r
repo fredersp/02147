@@ -339,8 +339,8 @@ data$Y_hat <- Y_hat
 # Plot
 library(ggplot2)
 
-ggplot(data, aes(x = t)) +
-  geom_line(aes(y = Y, color = "Observed")) +
+ggplot(data, aes(x = time)) +
+  geom_line(aes(y = Yt, color = "Observed")) +
   geom_line(aes(y = Y_hat, color = "Predicted"), linewidth = 1) +
   labs(title = "Transformer Temperature: Observed vs Predicted (2D Kalman Model)",
        x = "Time (hour)", y = "Temperature (°C)", color = "") +
