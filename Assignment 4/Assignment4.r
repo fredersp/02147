@@ -337,6 +337,61 @@ ggplot(results_long, aes(x = parameter, y = estimate)) +
   theme_minimal(base_size = 14)
 
 
+# Task 1.5
+# So far, you have assumed that both system and observation noise are Gaussian. In this exercise,
+# you will challenge this assumption by simulating system noise from a Student’s t-distribution instead. 
+
+# Simulation function (you already have this)
+simulate_t_model <- function(n, a, b, sigma1, sigma2, df) {
+  X <- numeric(n)
+  Y <- numeric(n)
+  
+  X[1] <- 0
+  Y[1] <- X[1] + rnorm(1, mean = 0, sd = sigma2)
+  
+  for (t in 2:n) {
+    process_noise <- sigma1 * rt(1, df = df)
+    X[t] <- a * X[t - 1] + b + process_noise
+    Y[t] <- X[t] + rnorm(1, mean = 0, sd = sigma2)
+  }
+  
+  return(list(X = X, Y = Y))
+}
+
+# Parameters
+a <- 1
+b <- 0.9
+sigma1 <- 1
+sigma2 <- 1
+n <- 100
+n_sim <- 100
+dfs <- c(100, 5, 2, 1)
+
+# Run simulation and collect final Xt's across all 100 simulations
+sim_results <- list()
+
+for (df in dfs) {
+  all_X <- matrix(NA, nrow = n_sim, ncol = n)
+  for (i in 1:n_sim) {
+    sim <- simulate_t_model(n, a, b, sigma1, sigma2, df)
+    all_X[i, ] <- sim$X
+  }
+  sim_results[[paste0("df_", df)]] <- all_X
+}
+
+# Plot density of t-distribution for each df vs. standard normal
+x_vals <- seq(-5, 5, length.out = 1000)
+plot(x_vals, dnorm(x_vals), type = "l", lwd = 2, col = "black",
+     ylab = "Density", xlab = "x", main = "T-distributions vs Normal")
+colors <- c("blue", "red", "darkgreen", "orange")
+
+for (i in seq_along(dfs)) {
+  lines(x_vals, dt(x_vals, df = dfs[i]), col = colors[i], lwd = 2)
+}
+
+legend("topright",
+       legend = c("Normal", paste0("t (df=", dfs, ")")),
+       col = c("black", colors), lty = 1, lwd = 2)
 
 
   
