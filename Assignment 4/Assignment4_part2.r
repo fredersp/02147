@@ -7,9 +7,9 @@ library(ggplot2)
 library(tidyr)
 library(dplyr)
 
-#setwd("/Users/nicolinesimonesachmann/Documents/DTU/Times Series Analysis/02147/Assignment 4")
+setwd("/Users/nicolinesimonesachmann/Documents/DTU/Times Series Analysis/02147/Assignment 4")
 #setwd("C:/Users/sofie/OneDrive/Time Series Analysis/02147/Assignment 4")
-setwd("C:/Users/frede/OneDrive/Skrivebord/02417 - Time Series Analysis/Assignments/02147/Assignment 4")
+#setwd("C:/Users/frede/OneDrive/Skrivebord/02417 - Time Series Analysis/Assignments/02147/Assignment 4")
 
 
 
@@ -234,6 +234,7 @@ kalman_predict_2D <- function(par, data) {
   Sigma1lt <- matrix(c(par[13], 0, par[14], par[15]), 2, 2)
   Sigma1 <- Sigma1lt %*% t(Sigma1lt)
   Sigma2 <- matrix(par[16]^2, 1, 1)
+  #X0 <- matrix(c(data$Yt[1], 0), 2, 1)
   X0 <- matrix(par[17:18], 2, 1)
 
   Y <- as.matrix(data$Yt)
@@ -259,22 +260,44 @@ kalman_predict_2D <- function(par, data) {
   return(Y_hat)
 }
 
-# Initial parameters
-# lEG MED VÆRDIERNE HER, LIGE NU ER INTIAL GUESS SAT TIL 10
+# Initial values
+init_X0 <- c(data$Yt[1], 0)  # First state roughly aligned with first Yt
+
 start_par_2D <- c(
-  0.9, 0.0,
+  0.9, 0.0,  # A matrix
   0.0, 0.9,
-  0.01, 0.01, 0.01,
-  0.01, 0.01, 0.01,
-  1, 0,
-  0.1, 0.05, 0.1,
-  0.1,
-  10, 0
+  0.01, 0.01, 0.01,  # B row 1
+  0.01, 0.01, 0.01,  # B row 2
+  1, 0,              # C matrix
+  0.1, 0.05, 0.1,    # Sigma1 lower triangle
+  0.1,               # Sigma2 (observation)
+  init_X0            # <- updated initial state
 )
 
+# Initial parameters
+# lEG MED VÆRDIERNE HER, LIGE NU ER INTIAL GUESS SAT TIL 10
+# start_par_2D <- c(
+#   0.9, 0.0,
+#   0.0, 0.9,
+#   0.01, 0.01, 0.01,
+#   0.01, 0.01, 0.01,
+#   1, 0,
+#   0.1, 0.05, 0.1,
+#   0.1,
+#   10, 0
+# )
 
-lower_2D <- c(rep(-1, 12), rep(1e-6, 7))
-upper_2D <- c(rep(1, 12), rep(10, 7))
+lower_2D <- c(rep(-1, 12), rep(1e-6, 4), 10, -10)  # tighter lower bound for X0
+upper_2D <- c(rep(1, 12), rep(10, 4), 40, 10)      # tighter upper bound for X0
+
+#lower_2D <- c(rep(-1, 12), rep(1e-6, 7))
+#upper_2D <- c(rep(1, 12), rep(10, 7))
+
+
+
+#start_par_2D <- start_par_2D[1:16]
+#lower_2D <- lower_2D[1:16]
+#upper_2D <- upper_2D[1:16]
 
 # Fit 2D model
 
