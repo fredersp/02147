@@ -396,3 +396,4 @@ ggplot(estimates_long, aes(x = factor(df), y = estimate)) +
     y = "Estimated Value"
   ) +
   theme_minimal(base_size = 14)
+  

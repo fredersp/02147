@@ -7,8 +7,8 @@ library(ggplot2)
 library(tidyr)
 library(dplyr)
 
-#setwd("/Users/nicolinesimonesachmann/Documents/DTU/Times Series Analysis/02147/Assignment 4")
-setwd("C:/Users/sofie/OneDrive/Time Series Analysis/02147/Assignment 4")
+setwd("/Users/nicolinesimonesachmann/Documents/DTU/Times Series Analysis/02147/Assignment 4")
+#setwd("C:/Users/sofie/OneDrive/Time Series Analysis/02147/Assignment 4")
 #setwd("C:/Users/frede/OneDrive/Skrivebord/02417 - Time Series Analysis/Assignments/02147/Assignment 4")
 
 
@@ -378,6 +378,92 @@ BIC_val_2D <- -2 * logLik_val_2D + log(n_2D) * k_2D
 cat("AIC (2D):", AIC_val_2D, "\n")
 cat("BIC (2D):", BIC_val_2D, "\n")
 
+######################
+# Parameter estimates
+# 2D parameters
+par_2D <- fit_2D$par
+cat("Estimated parameters (2D):\n")
+cat("A matrix:\n", matrix(par_2D[1:4], 2, 2), "\n")
+cat("B matrix:\n", matrix(par_2D[5:10], 2, 3), "\n")
+cat("C matrix:\n", matrix(par_2D[11:12], 1, 2), "\n")
+cat("Sigma1 lower triangle:\n", c(par_2D[13], par_2D[14], par_2D[15]), "\n")
+cat("Sigma2 sqrt:", par_2D[16], "\n")
+cat("X0 (initial state):\n", matrix(par_2D[17:18], 2, 1), "\n")
+
+
+
+######################
+
+#New plots
+
+# library(ggplot2)
+# library(patchwork)
+# library(tidyr)
+
+# 1. Observed vs predicted (2D)
+p1_2D <- ggplot(data, aes(x = time)) +
+  geom_line(aes(y = Yt, color = "Observed")) +
+  geom_line(aes(y = Y_hat_2D, color = "Predicted")) +
+  labs(
+    title = "Transformer Temperature: Observed vs Predicted (2D)",
+    x = "Time (hours)", y = "Temperature (°C)", color = ""
+  ) +
+  scale_color_manual(values = c("Observed" = "black", "Predicted" = "red")) +
+  theme_minimal(base_size = 14)
+
+# 2. Residuals
+p2_2D <- ggplot(data, aes(x = time, y = residuals_2D)) +
+  geom_line(color = "darkblue") +
+  labs(title = "Residuals Over Time", x = "Time (hours)", y = "Residuals") +
+  theme_minimal(base_size = 14)
+
+# 3. ACF and PACF
+# ACF
+acf_data_2D <- acf(data$residuals_2D, plot = FALSE, lag.max = 25)
+acf_df_2D <- data.frame(
+  lag = acf_data_2D$lag,
+  acf = acf_data_2D$acf
+)
+
+# PACF
+pacf_data_2D <- pacf(data$residuals_2D, plot = FALSE, lag.max = 25)
+pacf_vals <- as.numeric(pacf_data_2D$acf)  # flatten if needed
+lags <- seq_along(pacf_vals)
+
+pacf_df_2D <- data.frame(
+  lag = lags,
+  pacf = pacf_vals
+)
+
+
+
+p3_2D <- ggplot(acf_df_2D, aes(x = lag, y = acf)) +
+  geom_segment(aes(xend = lag, yend = 0), color = "red") +
+  geom_hline(yintercept = c(-1.96, 1.96) / sqrt(length(data$residuals_2D)), linetype = "dashed") +
+  labs(title = "ACF of Residuals", x = "Lag", y = "ACF") +
+  theme_minimal(base_size = 14)
+
+p4_2D <- ggplot(pacf_df_2D, aes(x = lag, y = pacf)) +
+  geom_segment(aes(xend = lag, yend = 0), color = "blue") +
+  geom_hline(yintercept = c(-1.96, 1.96) / sqrt(length(data$residuals_2D)), linetype = "dashed") +
+  labs(title = "PACF of Residuals", x = "Lag", y = "PACF") +
+  theme_minimal(base_size = 14)
+
+# 4. QQ plot
+qq_2D <- ggplot(data, aes(sample = residuals_2D)) +
+  stat_qq() +
+  stat_qq_line(col = "red") +
+  labs(title = "Q-Q Plot of Residuals") +
+  theme_minimal(base_size = 14)
+
+# 5. Combine all plots
+combined_2D <- (p1_2D / p2_2D / (p3_2D | p4_2D | qq_2D)) & theme_minimal(base_size = 18)
+
+# Show plot
+combined_2D
+
+
+############
 
 
 ######### 2.4 #########
@@ -434,3 +520,45 @@ ggplot(state_estimates_df, aes(x = time)) +
   scale_color_manual(values = c("State 1" = "blue", "State 2" = "red")) +
   theme_minimal(base_size = 14)
 # Den anden state space kunne ligne noget køling
+
+#### Plots
+
+#library(ggplot2)
+#library(patchwork)  # for combining plots
+
+# Combine state estimates with input variables
+state_estimates_df$Ta_t <- data$Ta_t
+state_estimates_df$Phi_s_t <- data$Phi_s_t
+state_estimates_df$Phi_I_t <- data$Phi_I_t
+
+# Plot latent states
+p_states <- ggplot(state_estimates_df, aes(x = time)) +
+  geom_line(aes(y = `State 1`, color = "State 1")) +
+  geom_line(aes(y = `State 2`, color = "State 2")) +
+  labs(title = "Latent States", y = "State Value", x = "Time (hours)", color = "") +
+  scale_color_manual(values = c("State 1" = "blue", "State 2" = "red")) +
+  theme_minimal(base_size = 13)
+
+# Plot Ta_t (outdoor air temperature)
+p_Ta <- ggplot(state_estimates_df, aes(x = time, y = Ta_t)) +
+  geom_line(color = "black") +
+  labs(title = expression(T[a,t]), y = "Temperature (°C)", x = "Time (hours)") +
+  theme_minimal(base_size = 13)
+
+# Plot Phi_s_t (solar radiation)
+p_Phi_s <- ggplot(state_estimates_df, aes(x = time, y = Phi_s_t)) +
+  geom_line(color = "orange") +
+  labs(title = expression(Phi[s,t]), y = "Solar Radiation (W/m²)", x = "Time (hours)") +
+  theme_minimal(base_size = 13)
+
+# Plot Phi_I_t (transformer load)
+p_Phi_I <- ggplot(state_estimates_df, aes(x = time, y = Phi_I_t)) +
+  geom_line(color = "darkgreen") +
+  labs(title = expression(Phi[I,t]), y = "Load (kA)", x = "Time (hours)") +
+  theme_minimal(base_size = 13)
+
+# Combine all plots vertically
+combined_plot <- p_states / p_Ta / p_Phi_s / p_Phi_I
+
+# Show plot
+combined_plot
