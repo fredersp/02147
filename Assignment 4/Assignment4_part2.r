@@ -7,8 +7,8 @@ library(ggplot2)
 library(tidyr)
 library(dplyr)
 
-setwd("/Users/nicolinesimonesachmann/Documents/DTU/Times Series Analysis/02147/Assignment 4")
-#setwd("C:/Users/sofie/OneDrive/Time Series Analysis/02147/Assignment 4")
+#setwd("/Users/nicolinesimonesachmann/Documents/DTU/Times Series Analysis/02147/Assignment 4")
+setwd("C:/Users/sofie/OneDrive/Time Series Analysis/02147/Assignment 4")
 #setwd("C:/Users/frede/OneDrive/Skrivebord/02417 - Time Series Analysis/Assignments/02147/Assignment 4")
 
 
@@ -142,9 +142,11 @@ cat("C:", par_1D[5], "\n")
 cat("Sigma1 sqrt:", par_1D[6], "\n")
 cat("Sigma2 sqrt:", par_1D[7], "\n")
 cat("X0:", par_1D[8], "\n")
+library(ggplot2)
+library(patchwork)
 
-# Plot observed vs predicted
-ggplot(data, aes(x = time)) +
+# Observed vs predicted
+p1 <- ggplot(data, aes(x = time)) +
   geom_line(aes(y = Yt, color = "Observed")) +
   geom_line(aes(y = Y_hat_1D, color = "Predicted")) +
   labs(
@@ -154,21 +156,44 @@ ggplot(data, aes(x = time)) +
   scale_color_manual(values = c("Observed" = "black", "Predicted" = "red")) +
   theme_minimal(base_size = 14)
 
-
-# Plot residuals
-ggplot(data, aes(x = time, y = residuals_1D)) +
+# Residuals
+p2 <- ggplot(data, aes(x = time, y = residuals_1D)) +
   geom_line(color = "darkblue") +
   labs(title = "Residuals Over Time", x = "Time (hours)", y = "Residuals") +
   theme_minimal(base_size = 14)
 
-# ACF plot and PACF plot of residuals
-par(mfrow = c(1, 2))
-acf(data$residuals_1D, main = "ACF of Residuals")
-pacf(data$residuals_1D, main = "PACF of Residuals")
+# ACF and PACF
+acf_data <- acf(data$residuals_1D, plot = FALSE, lag.max = 25)
+pacf_data <- pacf(data$residuals_1D, plot = FALSE, lag.max = 25)
 
-# Q-Q plot of residuals
-qqnorm(data$residuals_1D)
-qqline(data$residuals_1D, col = "red")
+acf_df <- data.frame(lag = acf_data$lag, acf = acf_data$acf)
+pacf_df <- data.frame(lag = pacf_data$lag, pacf = pacf_data$acf)
+
+p3 <- ggplot(acf_df, aes(x = lag, y = acf)) +
+  geom_segment(aes(xend = lag, yend = 0), color = "red") +
+  geom_hline(yintercept = c(-1.96, 1.96) / sqrt(length(data$residuals_1D)), linetype = "dashed") +
+  labs(title = "ACF of Residuals", x = "Lag", y = "ACF") +
+  theme_minimal(base_size = 14)
+
+p4 <- ggplot(pacf_df, aes(x = lag, y = pacf)) +
+  geom_segment(aes(xend = lag, yend = 0), color = "blue") +
+  geom_hline(yintercept = c(-1.96, 1.96) / sqrt(length(data$residuals_1D)), linetype = "dashed") +
+  labs(title = "PACF of Residuals", x = "Lag", y = "PACF") +
+  theme_minimal(base_size = 14)
+
+# QQ plot
+qq <- ggplot(data, aes(sample = residuals_1D)) +
+  stat_qq() +
+  stat_qq_line(col = "red") +
+  labs(title = "Q-Q Plot of Residuals") +
+  theme_minimal(base_size = 14)
+
+# Combine all plots
+combined <- (p1 / p2 / (p3 | p4 | qq)) & theme_minimal(base_size = 18)
+
+# Show combined figure
+combined
+
 
 # AIC and BIC calculation
 logLik_val <- kf_logLik_dt_1D(fit_1D$par, data)
